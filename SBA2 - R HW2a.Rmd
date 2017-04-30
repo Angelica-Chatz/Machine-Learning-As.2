@@ -1,0 +1,114 @@
+---
+title: "SBA2_HW2a"
+author: "Chatzimoschou Angeliki"
+date: "2016 M07 1"
+output: html_document
+---
+
+## Question 1
+
+```{r}
+d1 <- c(1, 0, 0, 1, 0, 0, 0, 1)
+d2 <- c(0, 1, 0, 1, 1, 0, 0, 0)
+d3 <- c(0, 0, 1, 0, 0, 0, 1, 0)
+d4 <- c(0, 0, 0, 1, 0, 0, 0, 0)
+d5 <- c(0, 0, 0, 0, 0, 0, 1, 0)
+d6 <- c(0, 0, 0, 1, 0, 1, 0, 1)
+d7 <- c(0, 0, 1, 0, 0, 1, 0, 1)
+d8 <- c(1, 0, 0, 0, 0, 0, 0, 1)
+d9 <- c(0, 0, 0, 0, 0, 1, 0, 1)
+d10 <- c(1, 1, 0, 0, 0, 1, 0, 1)
+
+nb_df <- as.data.frame(rbind(d1,d2,d3,d4,d5,d6,d7,d8,d9,d10))
+names(nb_df) <- c("BadCredit", "HasStableJob", "OwnsHouse", "BigLoan",
+"HasLargeBankAccount", "HasPriorLoans", "HasDependents", "Decision")
+```
+
+## Question 2
+
+```{r}
+(priors <- c(1 - sum(nb_df$Decision)/dim(nb_df)[1], sum(nb_df$Decision)/dim(nb_df)[1]))
+```
+
+## Question 3
+
+```{r}
+(probs.class.1 <- aggregate(nb_df, by=list(nb_df[,8]), FUN=mean)[-1])
+```
+
+## Question 4
+
+```{r}
+# Since P(Fi|Ci), which corresponds to 2 different classes, then it's impossible to get probabilities that add up to 1.
+```
+
+## Question 5
+
+```{r}
+(probs.class.0 <- 1 - probs.class.1)
+```
+
+## Question 6
+
+```{r}
+subset(probs.class.0, Decision==0)["BadCredit"]
+```
+
+## Question 7
+
+```{r}
+nb_df.smoothed <- rbind(nb_df,
+                      c(1,1,1,1,1,1,1,1),
+                      c(0,0,0,0,0,0,0,1),
+                      c(1,1,1,1,1,1,1,0),
+                      c(0,0,0,0,0,0,0,0))
+
+(probs.class.1 <- aggregate(nb_df.smoothed, by=list(nb_df.smoothed[,8]), FUN=mean)[-1])
+(probs.class.0 <- cbind(1 - probs.class.1[-8],probs.class.1[8]))
+```
+
+## Question 8
+
+```{r}
+nb.classifier <- function(observ, priors, prob_matrix) {
+                          tmp <- priors
+                                                         
+                          for ( i in 1:length(observ) ) {
+
+                              if (observ[i] == 1) { 
+                                tmp[1] <- tmp[1]*as.numeric(prob_matrix[1,i]) 
+                                tmp[2] <- tmp[2]*as.numeric(prob_matrix[2,i]) 
+                              }
+
+                              else if (observ[i] == 0) { 
+                                tmp[1] <- tmp[1]*as.numeric(1-prob_matrix[1,i])  
+                                tmp[2] <- tmp[2]*as.numeric(1-prob_matrix[2,i]) 
+                              }
+                              }
+                          
+                          return(which.max(as.numeric(tmp))-1)
+                         
+                }
+
+
+
+
+# Generalization:
+predict_nb <- function(test_df, priors, prob_matrix) {
+                          
+                      output <- rep(-1, dim(test_df)[1])
+                      
+                      for ( i in 1:dim(test_df)[1])  {
+                      output[i] <- nb.classifier(test_df[-dim(test_df)][i,], priors, prob_matrix)
+  }
+              return(output)
+}
+```
+
+## Question 9
+
+```{r}
+nb_prediction <- predict_nb(nb_df, priors, probs.class.1)
+
+(nb_accuracy <- sum(nb_prediction == nb_df$Decision) / nrow(nb_df))
+```
